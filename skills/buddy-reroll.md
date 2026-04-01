@@ -169,9 +169,10 @@ Ready to roll?
 
   1. ✨ Shiny Legendary (default 3 candidates per batch — takes longer)
   2. 🎰 Legendary (default 10 candidates per batch)
-  3. Cancel
+  3. 🔧 Hack Mode — patch rarity/species/stats directly in the binary
+  4. Cancel
 
-Pick a mode (1/2/cancel), or specify a custom batch size (e.g., "shiny 5", "legendary 20").
+Pick a mode (1/2/3/cancel), or specify a custom batch size (e.g., "shiny 5", "legendary 20").
 ```
 
 **Batch size limits:**
@@ -227,6 +228,111 @@ Pick a number, or "roll" to roll again.
 - If user asks for a specific species, adjust the search filter
 
 Continue rolling until the user is satisfied. There is no limit.
+
+## Phase 2B: Hack Mode
+
+If the user chose Hack Mode in Phase 1.6, skip Phase 2 (gacha roll) and instead patch the buddy system constants directly in the binary. This lets users force a specific rarity, species, or stat boost without brute-forcing salts.
+
+### 2B.1 Present Hack Options
+
+```
+🔧 Hack Mode — patch buddy constants directly.
+
+Available hacks:
+
+  [R] Rarity:  Force all rolls to Legendary
+      Patches: common:60,uncommon:25,rare:10,epic:4,legendary:1
+            →  common:00,uncommon:00,rare:00,epic:0,legendary:1
+
+  [S] Species: Choose your species (guaranteed 100%)
+      All 18 species slots are replaced with your choice.
+
+  [T] Stats:   Boost Legendary base stat from 50 to a custom value (max 99)
+      Patches: legendary:50 → legendary:NN
+      All stat values are capped at 100.
+
+Select hacks to apply, e.g. "R,S,T" or "R" only.
+You can also provide values inline:
+
+  | Input         | What happens                          |
+  |---------------|---------------------------------------|
+  | R             | Force legendary only                  |
+  | R,S           | Force legendary + pick species        |
+  | R,S,T         | All three hacks                       |
+  | S dragon      | Just species hack, pick dragon        |
+  | R,S duck,T 99 | All three: legendary + duck + base 99 |
+  | T 80          | Just boost stats (base 80)            |
+```
+
+Wait for user selection before proceeding. If the user provides values inline (e.g., "R,S duck,T 99"), skip the individual configuration prompts in 2B.2 for those hacks.
+
+### 2B.2 Configure Selected Hacks
+
+**Rarity [R]:** No configuration needed — binary replacement is fixed.
+
+**Species [S]:** Ask the user to pick a species:
+
+```
+Pick your species:
+
+  duck, goose, blob, cat, dragon, octopus, owl, penguin, turtle,
+  snail, ghost, axolotl, capybara, cactus, robot, rabbit, mushroom, chonk
+```
+
+At runtime, dynamically extract the species variable mapping from the binary by finding the `Trq=[...]` array and the `S2(...)` variable definitions nearby. Map each variable to its decoded species name using `String.fromCharCode`. Replace all 18 variable references in the `Trq=[...]` array with the chosen species' variable (all refs are 3 bytes, so any swap is same-length).
+
+**Stats [T]:** Ask the user for the desired legendary base stat value (1–99). Must be exactly 2 digits to maintain byte length (pad with leading zero if < 10, e.g., `09`). Replace `legendary:50` with `legendary:NN` in the stat base table.
+
+To prevent stats from exceeding 100, also patch the random multipliers in the stat roll function. The multipliers are 2-digit numbers in these patterns (each appears exactly 2 times in the binary):
+
+```
+Mid stat:       q+Math.floor(H()*40)       → q+Math.floor(H()*MM)
+Secondary stat: q-10+Math.floor(H()*15)    → q-10+Math.floor(H()*MM)
+```
+
+Compute replacement multipliers dynamically from the chosen base:
+
+```
+mid_multiplier       = min(40, 101 - base)   // ensures base + floor(rng * M) ≤ 100
+secondary_multiplier = min(15, 111 - base)   // ensures base - 10 + floor(rng * M) ≤ 100
+```
+
+Both are always 2 digits (zero-padded), so the byte length is unchanged. The primary stat formula (`Math.min(100, q+50+...)`) already caps at 100 and needs no patch.
+
+### 2B.3 Preview and Confirm
+
+Show the user a preview of all patches:
+
+```
+🔧 Hack preview:
+
+  Rarity:  common:00,uncommon:00,rare:00,epic:0,legendary:1
+  Species: Trq=[m0_,m0_,m0_,m0_,...] (18/18 dragon)
+  Stats:   legendary:99
+
+  [N] patches × 2 occurrences each = [2N] total replacements
+
+Proceed? (yes / cancel)
+```
+
+After confirmation, proceed to Phase 3 (Apply). The patching step (3.2) must apply **all** selected hack replacements in addition to the salt patch (if a salt was also chosen from Phase 2). Each replacement follows the same rules: same byte length, `data.replace()`, verify size unchanged.
+
+### 2B.4 Roll Preview
+
+After confirming hacks, run a Bun script to preview what the user's buddy will look like with the hacked constants and current salt:
+
+```
+🎰 Preview with hacked constants (current salt, no reroll):
+
+  🐉 dragon ★★★★★ hat:crown
+  DEBUGGING=99 | PATIENCE=95 | CHAOS=100 | WISDOM=100 | SNARK=100
+
+Happy with this? Or also reroll salt? (proceed / reroll salt / cancel)
+```
+
+- **"proceed"** → go to Phase 3 with hack patches only (no salt change)
+- **"reroll salt"** → go to Phase 2 (gacha roll) but with hacked constants in the search script, then Phase 3 applies both hack patches and the chosen salt
+- **"cancel"** → abort cleanly
 
 ## Phase 3: Apply
 
@@ -328,6 +434,8 @@ Restore command (if needed):
 | Known salt not found | Fall back to dynamic discovery |
 | Dynamic discovery also failed | Abort + suggest filing issue |
 | Algorithm validation mismatch | Abort + suggest filing issue |
+| Hack target string not found in binary | Abort hack — internals may have changed |
+| Species variable mapping extraction failed | Abort hack — suggest filing issue |
 | File size changed after patch | Abort + restore backup |
 | Codesign failed | Restore backup |
 | `claude --version` failed | Auto-restore backup |

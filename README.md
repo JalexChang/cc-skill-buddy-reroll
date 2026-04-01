@@ -16,7 +16,8 @@ The skill will:
 
 1. **Preflight** — Verify tools (`bun`, `codesign`, `python3`), locate the binary, extract the current salt, and validate the algorithm against your existing buddy
 2. **Gacha Roll** — Generate Legendary seeds and present them for selection. Roll again until you find one you like
-3. **Apply** — Backup the binary, patch the salt, re-sign with ad-hoc codesign, and clear the companion for re-hatch
+   - **Hack Mode** — Alternatively, patch the rarity weights, species array, and/or stat base values directly in the binary. Force Legendary rarity, bias toward a specific species, or boost stats beyond their normal ranges
+3. **Apply** — Backup the binary, patch the salt (and hack constants if selected), re-sign with ad-hoc codesign, and clear the companion for re-hatch
 4. **Verify** — Confirm the patched binary runs correctly. Auto-restore on failure
 
 ## Tested Version
