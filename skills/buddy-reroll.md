@@ -151,6 +151,14 @@ shiny = rng() < 0.01
 stats = rollStats(rng, rarity)      // DEBUGGING, PATIENCE, CHAOS, WISDOM, SNARK
 ```
 
+**Legendary stat ranges** (base=50, 1 primary boosted, 1 secondary penalized, 3 mid):
+
+| Type | Formula | Range |
+|------|---------|-------|
+| Primary (1 stat) | `min(100, 50+50+floor(rng*30))` | **100** (always capped) |
+| Secondary (1 stat) | `max(1, 50-10+floor(rng*15))` | **40–54** |
+| Other (3 stats) | `50+floor(rng*40)` | **50–89** |
+
 If validation succeeds, display the current buddy info.
 
 **Legendary/Shiny warning:** If the current buddy is already legendary and shiny, include a prominent warning in the roll prompt:
