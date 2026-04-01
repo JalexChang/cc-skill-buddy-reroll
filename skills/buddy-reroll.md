@@ -153,21 +153,36 @@ stats = rollStats(rng, rarity)      // DEBUGGING, PATIENCE, CHAOS, WISDOM, SNARK
 
 If validation succeeds, display the current buddy info.
 
-**Legendary/Shiny warning:** If the current buddy is already legendary (especially shiny), include a prominent warning in the roll prompt:
+**Legendary/Shiny warning:** If the current buddy is already legendary and shiny, include a prominent warning in the roll prompt:
 
 ```
-⚠️ Your current buddy is already Legendary ★★★★★ [✨SHINY]!
-   Rerolling guarantees legendary rarity, but shiny is only 1% per candidate.
-   You may lose your current shiny status.
+⚠️ Your current buddy is already Legendary ★★★★★ ✨SHINY!
+   Rerolling will replace your current companion.
 ```
 
 ### 1.6 Roll Confirmation
 
-After displaying the current buddy info (and the legendary/shiny warning if applicable), ask the user to confirm before rolling:
+After displaying the current buddy info (and the legendary/shiny warning if applicable), ask the user to choose a roll mode:
 
 ```
-Ready to roll? (yes / cancel)
+Ready to roll?
+
+  1. ✨ Shiny Legendary (default 3 candidates per batch — takes longer)
+  2. 🎰 Legendary (default 10 candidates per batch)
+  3. Cancel
+
+Pick a mode (1/2/cancel), or specify a custom batch size (e.g., "shiny 5", "legendary 20").
 ```
+
+**Batch size limits:**
+
+- If the user requests a batch size > 50, display a warning before proceeding:
+  ```
+  ⚠️ Batch size [N] is very large.
+     Shiny legendaries are ~0.01% of all rolls — this may take a while.
+     Continue? (yes / cancel)
+  ```
+- The user may adjust batch size at any time during rolling (e.g., "roll 5 more", "next 20").
 
 Wait for explicit confirmation before continuing to Phase 2. If the user says "cancel" / "nevermind", abort cleanly.
 
@@ -180,7 +195,10 @@ Write a Bun script that searches for replacement salts. Requirements:
 - New salt must be **exactly the same byte length** as the discovered salt — derive the length dynamically from the salt found in Phase 1.3 (do NOT hardcode it)
 - Characters must be ASCII printable and binary-safe: `[a-z0-9\-_]`
 - Only collect `legendary` rarity results
-- Generate a batch of ~10 candidates per roll
+- **Batch size** depends on the mode chosen in Phase 1.6:
+  - **Legendary mode:** default 10 candidates per batch
+  - **Shiny mode:** default 3 candidates per batch (only collect results where `shiny === true`)
+  - The user may override these defaults (e.g., "shiny 5", "legendary 20")
 - **Always reproduce the candidate list in your response text** — do not rely on tool output being visible to the user. After the script runs, re-print the results in your message.
 - Display format must include **full stats for all 5 dimensions**:
 
@@ -202,9 +220,11 @@ Pick a number, or "roll" to roll again.
 ### 2.2 Interactive Selection
 
 - User picks a number → proceed to Phase 3
-- User says "roll" / "again" / "more" → generate another batch
+- User says "roll" / "again" / "more" → generate another batch (same mode and batch size)
 - User says "cancel" / "nevermind" → abort cleanly, no changes made
-- If user asks for a specific species or shiny, adjust the search filter
+- User adjusts batch size mid-roll (e.g., "roll 5 more", "next 20") → use the new size for this and subsequent batches
+- User switches mode mid-roll (e.g., "switch to shiny", "legendary mode") → switch mode and reset batch size to that mode's default unless user specifies otherwise
+- If user asks for a specific species, adjust the search filter
 
 Continue rolling until the user is satisfied. There is no limit.
 
