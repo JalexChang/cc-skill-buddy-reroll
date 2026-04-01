@@ -157,7 +157,7 @@ If validation succeeds, display the current buddy info.
 
 ```
 ⚠️ Your current buddy is already Legendary ★★★★★ ✨SHINY!
-   Rerolling will replace your current companion.
+   Rerolling will replace your current companion and you may lose your shiny status.
 ```
 
 ### 1.6 Roll Confirmation
@@ -179,7 +179,7 @@ Pick a mode (1/2/cancel), or specify a custom batch size (e.g., "shiny 5", "lege
 - If the user requests a batch size > 50, display a warning before proceeding:
   ```
   ⚠️ Batch size [N] is very large.
-     Shiny legendaries are ~0.01% of all rolls — this may take a while.
+     Finding this many candidates may take a while, especially in Shiny mode (~0.01% chance).
      Continue? (yes / cancel)
   ```
 - The user may adjust batch size at any time during rolling (e.g., "roll 5 more", "next 20").
