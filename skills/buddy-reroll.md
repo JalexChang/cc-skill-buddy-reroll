@@ -235,6 +235,8 @@ If the user chose Hack Mode in Phase 1.6, skip Phase 2 (gacha roll) and instead 
 
 ### 2B.1 Present Hack Options
 
+**Note:** Hack Mode patches assume an unmodified binary. If the binary was previously hacked, restore from backup before re-running.
+
 ```
 🔧 Hack Mode — patch buddy constants directly.
 
